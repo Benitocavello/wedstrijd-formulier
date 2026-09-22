@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wedstrijdformulier JO13</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7f4;
+      color: #1f2937;
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 { margin: 0 0 16px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .panel {
+      background: white;
+      border: 1px solid #d1d5db;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .panel h2 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 10px 0 6px;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      font: inherit;
+      border-radius: 10px;
+    }
+    input, select, textarea {
+      border: 1px solid #cbd5e1;
+      padding: 10px 12px;
+      background: white;
+    }
+    textarea {
+      min-height: 200px;
+      resize: vertical;
+    }
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    button {
+      border: none;
+      padding: 11px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary { background: #1d4ed8; color: white; }
+    .btn-green { background: #15803d; color: white; }
+    .btn-gray { background: #e5e7eb; color: #111827; }
+    .small { font-size: 13px; color: #6b7280; margin-top: 8px; }
+    .chips {
+      min-height: 70px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: flex-start;
+      background: #f8fafc;
+    }
+    .player {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #2563eb;
+      color: white;
+      font-weight: 700;
+      cursor: grab;
+      user-select: none;
+      min-width: 80px;
+      text-align: center;
+    }
+    .field-card { background: white; border: 1px solid #d1d5db; border-radius: 14px; padding: 16px; }
+    .field-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .field-meta { font-size: 14px; color: #374151; }
+    .field {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 7 / 10;
+      border-radius: 18px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #1f8f45 0%, #16743a 100%);
+      border: 4px solid white;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2);
+    }
+    .line { position: absolute; border-color: rgba(255,255,255,0.95); }
+    .outer { inset: 2%; border: 3px solid white; }
+    .half { left: 2%; right: 2%; top: 50%; border-top: 3px solid white; }
+    .circle {
+      width: 22%; height: 15.5%; left: 39%; top: 42.25%; border: 3px solid white; border-radius: 50%;
+    }
+    .box-top { left: 26%; top: 2%; width: 48%; height: 15%; border: 3px solid white; }
+    .box-bottom { left: 26%; bottom: 2%; width: 48%; height: 15%; border: 3px solid white; }
+    .goal-top { left: 40%; top: 0; width: 20%; height: 3%; border: 3px solid white; }
+    .goal-bottom { left: 40%; bottom: 0; width: 20%; height: 3%; border: 3px solid white; }
+    .spot-top, .spot-bottom {
+      position: absolute; width: 8px; height: 8px; background: white; border-radius: 50%; left: 50%; transform: translateX(-50%);
+    }
+    .spot-top { top: 12%; }
+    .spot-bottom { bottom: 12%; }
+    .position {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      width: 110px;
+      min-height: 54px;
+      border-radius: 14px;
+      border: 2px dashed rgba(255,255,255,0.9);
+      background: rgba(255,255,255,0.18);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .position.over, .chips.over { background: rgba(255,255,255,0.28); }
+    .position .placeholder { opacity: 0.95; }
+    .bench-title { margin: 14px 0 8px; font-weight: 700; }
+    #bank { background: #eef2ff; }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .position { width: 92px; font-size: 12px; }
+    }
+    @media print {
+      body { background: white; }
+      .wrap { max-width: none; padding: 0; }
+      .grid { grid-template-columns: 1fr; }
+      .panel:first-child { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Wedstrijdformulier JO13</h1>
+    <div class="grid">
+      <div class="panel">
+        <h2>Wedstrijdgegevens</h2>
+        <label for="team">Team</label>
+        <input id="team" placeholder="Bijv. JO13-1" />
+
+        <label for="tegenstander">Tegenstander</label>
+        <input id="tegenstander" placeholder="Bijv. SV Voorbeeld" />
+
+        <label for="datum">Datum</label>
+        <input id="datum" type="date" />
+
+        <label for="formatie">Opstelling</label>
+        <select id="formatie">
+          <option value="4-3-3" selected>4-3-3</option>
+          <option value="4-4-2">4-4-2</option>
+          <option value="3-4-3">3-4-3</option>
+          <option value="3-5-2">3-5-2</option>
+        </select>
+
+        <label for="spelersInput">Spelers invoeren</label>
+        <textarea id="spelersInput" placeholder="Zet hier 1 naam per regel&#10;Bijv.&#10;Noud H&#10;Daan&#10;Milan"></textarea>
+        <div class="small">Zet 1 naam per regel. Na slepen komt die naam op de gekozen positie te staan.</div>
+
+        <div class="btn-row">
+          <button class="btn-primary" id="laadSpelers">Spelers laden</button>
+          <button class="btn-green" id="voorbeeld">Voorbeeld vullen</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn-gray" id="leeg">Alles leegmaken</button>
+          <button class="btn-primary" id="pdf">Opslaan als PDF</button>
+        </div>
+
+        <label style="margin-top:16px;">Beschikbare spelers</label>
+        <div id="beschikbaar" class="chips"></div>
+
+        <div class="bench-title">Wissels / bank</div>
+        <div id="bank" class="chips"></div>
+      </div>
+
+      <div class="field-card" id="pdfGebied">
+        <div class="field-header">
+          <div>
+            <strong id="titelTeam">Team:</strong>
+            <div class="field-meta" id="titelInfo">Tegenstander: - | Datum: - | Opstelling: 4-3-3</div>
+          </div>
+        </div>
+
+        <div class="field" id="veld">
+          <div class="line outer"></div>
+          <div class="line half"></div>
+          <div class="line circle"></div>
+          <div class="line box-top"></div>
+          <div class="line box-bottom"></div>
+          <div class="line goal-top"></div>
+          <div class="line goal-bottom"></div>
+          <div class="spot-top"></div>
+          <div class="spot-bottom"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const formatieSelect = document.getElementById('formatie');
+    const veld = document.getElementById('veld');
+    const beschikbaar = document.getElementById('beschikbaar');
+    const bank = document.getElementById('bank');
+    const spelersInput = document.getElementById('spelersInput');
+    const teamInput = document.getElementById('team');
+    const tegenstanderInput = document.getElementById('tegenstander');
+    const datumInput = document.getElementById('datum');
+    const titelTeam = document.getElementById('titelTeam');
+    const titelInfo = document.getElementById('titelInfo');
+
+    const formaties = {
+      '4-3-3': [
+        { label: 'Keeper', x: 50, y: 90 },
+        { label: 'Linksback', x: 20, y: 72 },
+        { label: 'Linker centrale verdediger', x: 40, y: 72 },
+        { label: 'Rechter centrale verdediger', x: 60, y: 72 },
+        { label: 'Rechtsback', x: 80, y: 72 },
+        { label: 'Midden links', x: 28, y: 52 },
+        { label: 'Midden centraal', x: 50, y: 48 },
+        { label: 'Midden rechts', x: 72, y: 52 },
+        { label: 'Linksbuiten', x: 20, y: 24 },
+        { label: 'Spits', x: 50, y: 18 },
+        { label: 'Rechtsbuiten', x: 80, y: 24 }
+      ],
+      '4-4-2': [
+        { label: 'Keeper', x: 50, y: 90 },
+        { label: 'Linksback', x: 20, y: 72 },
+        { label: 'Linker centrale verdediger', x: 40, y: 72 },
+        { label: 'Rechter centrale verdediger', x: 60, y: 72 },
+        { label: 'Rechtsback', x: 80, y: 72 },
+        { label: 'Midden links', x: 18, y: 50 },
+        { label: 'Midden centraal links', x: 40, y: 50 },
+        { label: 'Midden centraal rechts', x: 60, y: 50 },
+        { label: 'Midden rechts', x: 82, y: 50 },
+        { label: 'Spits links', x: 38, y: 22 },
+        { label: 'Spits rechts', x: 62, y: 22 }
+      ],
+      '3-4-3': [
+        { label: 'Keeper', x: 50, y: 90 },
+        { label: 'Linker centrale verdediger', x: 25, y: 72 },
+        { label: 'Centrale verdediger', x: 50, y: 70 },
+        { label: 'Rechter centrale verdediger', x: 75, y: 72 },
+        { label: 'Midden links', x: 18, y: 48 },
+        { label: 'Midden centraal links', x: 40, y: 50 },
+        { label: 'Midden centraal rechts', x: 60, y: 50 },
+        { label: 'Midden rechts', x: 82, y: 48 },
+        { label: 'Linksbuiten', x: 20, y: 24 },
+        { label: 'Spits', x: 50, y: 18 },
+        { label: 'Rechtsbuiten', x: 80, y: 24 }
+      ],
+      '3-5-2': [
+        { label: 'Keeper', x: 50, y: 90 },
+        { label: 'Linker centrale verdediger', x: 25, y: 72 },
+        { label: 'Centrale verdediger', x: 50, y: 70 },
+        { label: 'Rechter centrale verdediger', x: 75, y: 72 },
+        { label: 'Wingback links', x: 14, y: 48 },
+        { label: 'Midden centraal links', x: 34, y: 52 },
+        { label: 'Midden centraal', x: 50, y: 48 },
+        { label: 'Midden centraal rechts', x: 66, y: 52 },
+        { label: 'Wingback rechts', x: 86, y: 48 },
+        { label: 'Spits links', x: 38, y: 22 },
+        { label: 'Spits rechts', x: 62, y: 22 }
+      ]
+    };
+
+    function updateKop() {
+      titelTeam.textContent = 'Team: ' + (teamInput.value || '-');
+      titelInfo.textContent = 'Tegenstander: ' + (tegenstanderInput.value || '-') +
+        ' | Datum: ' + (datumInput.value || '-') +
+        ' | Opstelling: ' + formatieSelect.value;
+    }
+
+    function maakSpeler(naam) {
+      const div = document.createElement('div');
+      div.className = 'player';
+      div.draggable = true;
+      div.textContent = naam;
+      div.addEventListener('dragstart', () => {
+        div.classList.add('dragging');
+      });
+      div.addEventListener('dragend', () => {
+        div.classList.remove('dragging');
+      });
+      return div;
+    }
+
+    function maakDropZone(zone) {
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('over');
+      });
+      zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('over');
+        const speler = document.querySelector('.dragging');
+        if (!speler) return;
+        zone.appendChild(speler);
+      });
+    }
+
+    function maakPositie(pos) {
+      const div = document.createElement('div');
+      div.className = 'position';
+      div.style.left = pos.x + '%';
+      div.style.top = pos.y + '%';
+      div.dataset.label = pos.label;
+      div.innerHTML = '<span class="placeholder">' + pos.label + '</span>';
+
+      div.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        div.classList.add('over');
+      });
+      div.addEventListener('dragleave', () => div.classList.remove('over'));
+      div.addEventListener('drop', (e) => {
+        e.preventDefault();
+        div.classList.remove('over');
+        const speler = document.querySelector('.dragging');
+        if (!speler) return;
+
+        const aanwezige = div.querySelector('.player');
+        if (aanwezige) beschikbaar.appendChild(aanwezige);
+
+        const placeholder = div.querySelector('.placeholder');
+        if (placeholder) placeholder.remove();
+        div.appendChild(speler);
+      });
+
+      div.addEventListener('dblclick', () => {
+        const speler = div.querySelector('.player');
+        if (!speler) return;
+        beschikbaar.appendChild(speler);
+        div.innerHTML = '<span class="placeholder">' + div.dataset.label + '</span>';
+      });
+
+      return div;
+    }
+
+    function renderFormatie() {
+      veld.querySelectorAll('.position').forEach(el => el.remove());
+      formaties[formatieSelect.value].forEach(pos => veld.appendChild(maakPositie(pos)));
+      updateKop();
+    }
+
+    function laadSpelers() {
+      beschikbaar.innerHTML = '';
+      bank.innerHTML = '';
+      renderFormatie();
+
+      spelersInput.value
+        .split('\n')
+        .map(s => s.trim())
+        .filter(Boolean)
+        .forEach(naam => beschikbaar.appendChild(maakSpeler(naam)));
+    }
+
+    function vulVoorbeeld() {
+      teamInput.value = 'JO13-1';
+      tegenstanderInput.value = 'SV Voorbeeld';
+      if (!datumInput.value) datumInput.value = new Date().toISOString().split('T')[0];
+      formatieSelect.value = '4-3-3';
+      spelersInput.value = [
+        'Noud H','Daan','Milan','Sem','Finn','Lucas','Mees','Tijn','Yassine','Levi','Bram','Jan','Rayan','Pim'
+      ].join('\n');
+      laadSpelers();
+      updateKop();
+    }
+
+    function maakLeeg() {
+      teamInput.value = '';
+      tegenstanderInput.value = '';
+      datumInput.value = '';
+      formatieSelect.value = '4-3-3';
+      spelersInput.value = '';
+      beschikbaar.innerHTML = '';
+      bank.innerHTML = '';
+      renderFormatie();
+      updateKop();
+    }
+
+    async function exporteerPDF() {
+      updateKop();
+      const canvas = await html2canvas(document.getElementById('pdfGebied'), { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const imgWidth = pageWidth - 20;
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      const y = Math.max(10, (pageHeight - imgHeight) / 2);
+      pdf.addImage(imgData, 'PNG', 10, y, imgWidth, imgHeight);
+      pdf.save('wedstrijdformulier-jo13.pdf');
+    }
+
+    maakDropZone(beschikbaar);
+    maakDropZone(bank);
+
+    document.getElementById('laadSpelers').addEventListener('click', laadSpelers);
+    document.getElementById('voorbeeld').addEventListener('click', vulVoorbeeld);
+    document.getElementById('leeg').addEventListener('click', maakLeeg);
+    document.getElementById('pdf').addEventListener('click', exporteerPDF);
+    formatieSelect.addEventListener('change', renderFormatie);
+    [teamInput, tegenstanderInput, datumInput].forEach(el => el.addEventListener('input', updateKop));
+
+    renderFormatie();
+    updateKop();
+  </script>
+</body>
+</html>
