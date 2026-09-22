@@ -4,15 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wedstrijdformulier JO13</title>
-
-  <link rel="icon" type="image/png" href="icon.png?v=2">
-  <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=2">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Wedstrijdformulier">
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
- 
   <style>
     * { box-sizing: border-box; }
     body {
@@ -249,6 +242,7 @@
     const datumInput = document.getElementById('datum');
     const titelTeam = document.getElementById('titelTeam');
     const titelInfo = document.getElementById('titelInfo');
+    const STORAGE_KEY = 'wedstrijdformulier_jo13_v1';
 
     const formaties = {
       '4-3-3': [
@@ -312,6 +306,75 @@
         ' | Opstelling: ' + formatieSelect.value;
     }
 
+    function leesOpslag() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      } catch {
+        return null;
+      }
+    }
+
+    function haalNaamUitZone(zone) {
+      return Array.from(zone.querySelectorAll('.player')).map(speler => speler.textContent);
+    }
+
+    function haalPositiesOp() {
+      const posities = {};
+      veld.querySelectorAll('.position').forEach(zone => {
+        const speler = zone.querySelector('.player');
+        posities[zone.dataset.label] = speler ? speler.textContent : '';
+      });
+      return posities;
+    }
+
+    function slaOp() {
+      const data = {
+        team: teamInput.value,
+        tegenstander: tegenstanderInput.value,
+        datum: datumInput.value,
+        formatie: formatieSelect.value,
+        spelersInput: spelersInput.value,
+        beschikbaar: haalNaamUitZone(beschikbaar),
+        bank: haalNaamUitZone(bank),
+        posities: haalPositiesOp()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function zetSpelerInZone(naam, zone) {
+      if (!naam || !zone) return;
+      const speler = maakSpeler(naam);
+      const placeholder = zone.querySelector('.placeholder');
+      if (placeholder) placeholder.remove();
+      zone.appendChild(speler);
+    }
+
+    function herstelUitOpslag() {
+      const data = leesOpslag();
+      if (!data) return;
+
+      teamInput.value = data.team || '';
+      tegenstanderInput.value = data.tegenstander || '';
+      datumInput.value = data.datum || '';
+      formatieSelect.value = data.formatie && formaties[data.formatie] ? data.formatie : '4-3-3';
+      spelersInput.value = data.spelersInput || '';
+
+      renderFormatie();
+      beschikbaar.innerHTML = '';
+      bank.innerHTML = '';
+
+      (data.beschikbaar || []).forEach(naam => beschikbaar.appendChild(maakSpeler(naam)));
+      (data.bank || []).forEach(naam => bank.appendChild(maakSpeler(naam)));
+
+      const posities = data.posities || {};
+      veld.querySelectorAll('.position').forEach(zone => {
+        const naam = posities[zone.dataset.label];
+        if (naam) zetSpelerInZone(naam, zone);
+      });
+
+      updateKop();
+    }
+
     function maakSpeler(naam) {
       const div = document.createElement('div');
       div.className = 'player';
@@ -338,6 +401,7 @@
         const speler = document.querySelector('.dragging');
         if (!speler) return;
         zone.appendChild(speler);
+        slaOp();
       });
     }
 
@@ -366,6 +430,7 @@
         const placeholder = div.querySelector('.placeholder');
         if (placeholder) placeholder.remove();
         div.appendChild(speler);
+        slaOp();
       });
 
       div.addEventListener('dblclick', () => {
@@ -373,6 +438,7 @@
         if (!speler) return;
         beschikbaar.appendChild(speler);
         div.innerHTML = '<span class="placeholder">' + div.dataset.label + '</span>';
+        slaOp();
       });
 
       return div;
@@ -394,6 +460,8 @@
         .map(s => s.trim())
         .filter(Boolean)
         .forEach(naam => beschikbaar.appendChild(maakSpeler(naam)));
+
+      slaOp();
     }
 
     function vulVoorbeeld() {
@@ -406,6 +474,7 @@
       ].join('\n');
       laadSpelers();
       updateKop();
+      slaOp();
     }
 
     function maakLeeg() {
@@ -418,6 +487,7 @@
       bank.innerHTML = '';
       renderFormatie();
       updateKop();
+      localStorage.removeItem(STORAGE_KEY);
     }
 
     async function exporteerPDF() {
@@ -442,11 +512,21 @@
     document.getElementById('voorbeeld').addEventListener('click', vulVoorbeeld);
     document.getElementById('leeg').addEventListener('click', maakLeeg);
     document.getElementById('pdf').addEventListener('click', exporteerPDF);
-    formatieSelect.addEventListener('change', renderFormatie);
-    [teamInput, tegenstanderInput, datumInput].forEach(el => el.addEventListener('input', updateKop));
+    formatieSelect.addEventListener('change', () => {
+      renderFormatie();
+      slaOp();
+    });
+    [teamInput, tegenstanderInput, datumInput].forEach(el => el.addEventListener('input', () => {
+      updateKop();
+      slaOp();
+    }));
+    spelersInput.addEventListener('input', slaOp);
 
-    renderFormatie();
-    updateKop();
+    herstelUitOpslag();
+    if (!leesOpslag()) {
+      renderFormatie();
+      updateKop();
+    }
   </script>
 </body>
 </html>
